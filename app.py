@@ -54,8 +54,8 @@ def detect_mock(net, frame):
     return None
 
 def detect_res10_init():
-    prototxt = 'res10_300x300_ssd_iter_140000.prototxt'
-    caffemodel = 'res10_300x300_ssd_iter_140000.caffemodel'
+    prototxt = 'caffe_ssd_res10.prototxt'
+    caffemodel = 'caffe_ssd_res10.caffemodel'
     net = cv2.dnn.readNetFromCaffe(prototxt, caffemodel)
     return net
 
@@ -70,8 +70,8 @@ def detect_res10(net, frame):
     return detections
 
 def detect_inference_init():
-    pb = 'inference.pb'
-    pbtxt = 'inference.pbtxt'
+    pb = 'tf_ssd_inception.pb'
+    pbtxt = 'tf_ssd_inception.pbtxt'
     net = cv2.dnn.readNetFromTensorflow(pb, pbtxt)
     return net
 
