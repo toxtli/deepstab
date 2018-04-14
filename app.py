@@ -69,6 +69,22 @@ def detect_res10(net, frame):
     detections = net.forward()
     return detections
 
+def detect_fastrcnn_init():
+    pb = 'tf_fastrcnn_inception.pb'
+    pbtxt = 'tf_fastrcnn_inception.pbtxt'
+    net = cv2.dnn.readNetFromTensorflow(pb, pbtxt)
+    return net
+
+def detect_fastrcnn(net, frame):
+    inWidth = 300
+    inHeight = 300
+    means = (127.5, 127.5, 127.5)
+    ratio = 1.0/127.5
+    #net.setInput(dnn.blobFromImage(cv2.resize(frame, (inWidth, inHeight)), ratio, (inWidth, inHeight), means))
+    net.setInput(dnn.blobFromImage(frame, ratio, (inWidth, inHeight), means, swapRB=True, crop=False))
+    detections = net.forward()
+    return detections
+
 def detect_inference_init():
     pb = 'tf_ssd_inception.pb'
     pbtxt = 'tf_ssd_inception.pbtxt'
@@ -107,12 +123,12 @@ if __name__ == '__main__':
     camera_number = 0
     write_file = False
     visualize = True
-    use_tracking = True
+    use_tracking = False
     #resize_image = None
     resize_image = (888, 480)
     stab_method = stab_scale
-    detect_method = detect_res10
-    detect_method_init = detect_res10_init
+    detect_method = detect_fastrcnn
+    detect_method_init = detect_fastrcnn_init
     get_tracker = tracker_KCF
 
     net = detect_method_init()
