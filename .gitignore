@@ -1,3 +1,5 @@
 .DS_Store
 cv2.so
+*.pb
+*.pbtxt
 
