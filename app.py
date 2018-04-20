@@ -85,13 +85,45 @@ def detect_fastrcnn(net, frame):
     detections = net.forward()
     return detections
 
-def detect_inference_init():
-    pb = 'tf_ssd_inception.pb'
-    pbtxt = 'tf_ssd_inception.pbtxt'
+def detect_inference_widerface_init():
+    pb = 'tf_ssd_inception_widerface.pb'
+    pbtxt = 'tf_ssd_inception_widerface.pbtxt'
     net = cv2.dnn.readNetFromTensorflow(pb, pbtxt)
     return net
 
-def detect_inference(net, frame):
+def detect_inference_widerface(net, frame):
+    inWidth = 300
+    inHeight = 300
+    means = (127.5, 127.5, 127.5)
+    ratio = 1.0/127.5
+    #net.setInput(dnn.blobFromImage(cv2.resize(frame, (inWidth, inHeight)), ratio, (inWidth, inHeight), means))
+    net.setInput(dnn.blobFromImage(frame, ratio, (inWidth, inHeight), means, swapRB=True, crop=False))
+    detections = net.forward()
+    return detections
+
+def detect_mobilenet_openimages_init():
+    pb = "tf_ssd_mobilenet_openimages.pb"
+    pbtxt = "tf_ssd_mobilenet_openimages.pbtxt"
+    net = cv2.dnn.readNetFromTensorflow(pb, pbtxt)
+    return net
+
+def detect_mobilenet_openimages(net, frame):
+    inWidth = 300
+    inHeight = 300
+    means = (127.5, 127.5, 127.5)
+    ratio = 1.0/127.5
+    #net.setInput(dnn.blobFromImage(cv2.resize(frame, (inWidth, inHeight)), ratio, (inWidth, inHeight), means))
+    net.setInput(dnn.blobFromImage(frame, ratio, (inWidth, inHeight), means, swapRB=True, crop=False))
+    detections = net.forward()
+    return detections
+
+def detect_mobilenet_widerface_init():
+    pb = 'tf_ssd_mobilenet_widerface.pb'
+    pbtxt = 'tf_ssd_mobilenet_widerface.pbtxt'
+    net = cv2.dnn.readNetFromTensorflow(pb, pbtxt)
+    return net
+
+def detect_mobilenet_widerface(net, frame):
     inWidth = 300
     inHeight = 300
     means = (127.5, 127.5, 127.5)
@@ -127,91 +159,103 @@ if __name__ == '__main__':
     #resize_image = None
     resize_image = (888, 480)
     stab_method = stab_scale
-    detect_method = detect_fastrcnn
-    detect_method_init = detect_fastrcnn_init
+    detect_method = detect_inference_widerface
+    detect_method_init = detect_inference_widerface_init
     get_tracker = tracker_KCF
 
     net = detect_method_init()
     cap = cv2.VideoCapture(camera_number)
     use_detector = True
     ok = None
+    out = None
     bbox = None
-    font = cv2.FONT_HERSHEY_SIMPLEX
     lastFound = None
     prevFrameTime = None
     currentFrameTime = None
-    size = 1
-    color = (255,255,255)
-    weight = 2
+    font = cv2.FONT_HERSHEY_SIMPLEX
     avg = 0
     fps = 0
     num = 1
-    cont = 0
-    out = None
+    size = 1
+    weight = 2
+    correct = 0
+    accuracy = 0
+    count_ms = 0
+    count_fps = 0
+    count_acc = 0
+    frame_num = 0
+    color = (255,255,255)
 
     if use_tracking:
       tracker = get_tracker()
 
     while True:
-        ret, frame = cap.read()
-        if resize_image is not None:
-          frame = cv2.resize(frame, resize_image)
-        cols = frame.shape[1]
-        rows = frame.shape[0]
-        if write_file and out is None:
-          out = cv2.VideoWriter("out.avi", cv2.VideoWriter_fourcc(*'H264'), 25.0, (cols, rows))
-        
-        if net:
-          found = False
-          if not use_tracking or bbox is None or use_detector:
-            detections = detect_method(net, frame)
-            for i in range(detections.shape[2]):
-                confidence = detections[0, 0, i, 2]
-                if confidence > confThreshold:
-                    found = True
-                    use_detector = False
-                    xLeftBottom = int(detections[0, 0, i, 3] * cols)
-                    yLeftBottom = int(detections[0, 0, i, 4] * rows)
-                    xRightTop = int(detections[0, 0, i, 5] * cols)
-                    yRightTop = int(detections[0, 0, i, 6] * rows)
-                    bbox = (xLeftBottom, xRightTop, yLeftBottom, yRightTop)
-                    box_color = (0, 255, 0)
-                    #print(bbox)
-          else:
-            if ok is None:
-              ok = tracker.init(frame, bbox)
-            else:
-              ok, box = tracker.update(frame)
-              box = (int(box[0]), int(box[1]), int(box[2]), int(box[3]))
-              if ok:
-                found = True
-                bbox = box
-                box_color = (255, 0, 0)
-                #print(bbox)
-              else:
-                use_detector = True
-          if found:
-            cv2.rectangle(frame, (bbox[0], bbox[2]), (bbox[1], bbox[3]), box_color)
-          if bbox is not None:
-            frame = stab_method(frame, bbox)
-
-        prevFrameTime = currentFrameTime
-        currentFrameTime = time.time()
-        if (prevFrameTime != None):
-            diff = currentFrameTime - prevFrameTime
-            fps = 1.0 / diff
-            cont += fps
-            avg = cont // num
-            num += 1
-        cv2.putText(frame, str(avg), (10, 30), font, size, color, weight)
-        if write_file:
-          out.write(frame)
-        if visualize:
-          cv2.imshow("detections", frame)
+      frame_num += 1
+      start_time_total = time.time()
+      ret, frame = cap.read()
+      if resize_image is not None:
+        frame = cv2.resize(frame, resize_image)
+      cols = frame.shape[1]
+      rows = frame.shape[0]
+      if write_file and out is None:
+        out = cv2.VideoWriter("out.avi", cv2.VideoWriter_fourcc(*'H264'), 25.0, (cols, rows))
+      if net:
+        found = False
+        if not use_tracking or bbox is None or use_detector:
+          start_time = time.time()
+          detections = detect_method(net, frame)
+          elapsed_time = time.time() - start_time
+          for i in range(detections.shape[2]):
+            confidence = detections[0, 0, i, 2]
+            if confidence > confThreshold:
+              found = True
+              use_detector = False
+              xLeftBottom = int(detections[0, 0, i, 3] * cols)
+              yLeftBottom = int(detections[0, 0, i, 4] * rows)
+              xRightTop = int(detections[0, 0, i, 5] * cols)
+              yRightTop = int(detections[0, 0, i, 6] * rows)
+              bbox = (xLeftBottom, xRightTop, yLeftBottom, yRightTop)
+              box_color = (0, 255, 0)
         else:
-          print(avg)
-        if cv2.waitKey(1) != -1:
-            break
+          if ok is None:
+            ok = tracker.init(frame, bbox)
+          else:
+            start_time = time.time()
+            ok, box = tracker.update(frame)
+            elapsed_time = time.time() - start_time
+            box = (int(box[0]), int(box[1]), int(box[2]), int(box[3]))
+            if ok:
+              bbox = box
+              found = True
+              box_color = (255, 0, 0)
+            else:
+              use_detector = True
+        if found:
+          correct += 1
+          cv2.rectangle(frame, (bbox[0], bbox[2]), (bbox[1], bbox[3]), box_color)
+        if bbox is not None:
+          frame = stab_method(frame, bbox)
+
+      diff = time.time() - start_time_total
+      fps = 1.0 / diff
+      accuracy = correct / frame_num
+      count_fps += fps
+      count_acc += accuracy * 100
+      count_ms += diff * 1000
+      avg_ms = count_ms // num
+      avg_fps = count_fps // num
+      avg_acc = count_acc // num
+      num += 1
+
+      cv2.putText(frame, "fps: %s acc: %s ms: %s" % (avg_fps, avg_acc, avg_ms), (10, 30), font, size, color, weight)
+      if write_file:
+        out.write(frame)
+      if visualize:
+        cv2.imshow("detections", frame)
+      else:
+        print(avg)
+      if cv2.waitKey(1) != -1:
+        break
 
 #no vis + no face + no stab + no save = 32fps
 #no vis + no face + no stab + save = 32fps
