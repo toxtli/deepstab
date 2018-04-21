@@ -156,11 +156,11 @@ if __name__ == '__main__':
     write_file = False
     visualize = True
     use_tracking = False
-    #resize_image = None
-    resize_image = (888, 480)
+    resize_image = None
+    #resize_image = (888, 480)
     stab_method = stab_scale
-    detect_method = detect_inference_widerface
-    detect_method_init = detect_inference_widerface_init
+    detect_method = detect_res10
+    detect_method_init = detect_res10_init
     get_tracker = tracker_KCF
 
     net = detect_method_init()
