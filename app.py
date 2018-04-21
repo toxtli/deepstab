@@ -85,13 +85,29 @@ def detect_fastrcnn(net, frame):
     detections = net.forward()
     return detections
 
-def detect_inference_widerface_init():
+def detect_inception_openimages_init():
+    pb = 'tf_ssd_inception_openimages.pb'
+    pbtxt = 'tf_ssd_inception_openimages.pbtxt'
+    net = cv2.dnn.readNetFromTensorflow(pb, pbtxt)
+    return net
+
+def detect_inception_openimages(net, frame):
+    inWidth = 300
+    inHeight = 300
+    means = (127.5, 127.5, 127.5)
+    ratio = 1.0/127.5
+    #net.setInput(dnn.blobFromImage(cv2.resize(frame, (inWidth, inHeight)), ratio, (inWidth, inHeight), means))
+    net.setInput(dnn.blobFromImage(frame, ratio, (inWidth, inHeight), means, swapRB=True, crop=False))
+    detections = net.forward()
+    return detections
+
+def detect_inception_widerface_init():
     pb = 'tf_ssd_inception_widerface.pb'
     pbtxt = 'tf_ssd_inception_widerface.pbtxt'
     net = cv2.dnn.readNetFromTensorflow(pb, pbtxt)
     return net
 
-def detect_inference_widerface(net, frame):
+def detect_inception_widerface(net, frame):
     inWidth = 300
     inHeight = 300
     means = (127.5, 127.5, 127.5)
